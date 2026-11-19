@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="uk" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мої валюти</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="styles.css?v=11">
+</head>
+<body>
+
+<canvas id="weather-bg" aria-hidden="true"></canvas>
+
+<div id="toast-container" class="toast-container"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">⇄</div>
+    <div class="logo-text">
+      <span class="logo-main">Мої</span>
+      <span class="logo-pro">валюти</span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" data-section="cards" onclick="navigateTo('cards')">
+      <span class="nav-icon">💳</span><span class="nav-label">Мої картки</span>
+    </a>
+    <a class="nav-item" data-section="rates" onclick="navigateTo('rates')">
+      <span class="nav-icon">📈</span><span class="nav-label">Курси</span>
+    </a>
+    <a class="nav-item" data-section="history" onclick="navigateTo('history')">
+      <span class="nav-icon">🧾</span><span class="nav-label">Історія покупок</span>
+    </a>
+    <a class="nav-item" data-section="settings" onclick="navigateTo('settings')">
+      <span class="nav-icon">⚙️</span><span class="nav-label">Налаштування</span>
+    </a>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<div class="main-wrap">
+
+  <header class="app-header">
+    <div class="header-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Меню">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <h1 class="page-title" id="page-title">Мої картки</h1>
+      <span class="present-badge" id="present-badge" style="display:none" onclick="togglePresentMode(false)" title="Вимкнути режим презентації">🎤 Презентація</span>
+    </div>
+    <div class="header-center">
+      <div class="rate-status" id="rate-status">
+        <span class="status-dot" id="status-nbu"></span> НБУ
+        <span class="status-dot" id="status-mono"></span> Mono
+        <span class="status-dot" id="status-privat"></span> Приват
+        <span class="status-time" id="status-time">—</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="weather-widget" id="weather-widget" title="Погода"></button>
+      <button class="icon-btn" id="balance-toggle-btn" onclick="toggleBalanceVisibility()" title="Показати / сховати суми">👁</button>
+      <button class="icon-btn" onclick="refreshAll()" title="Оновити" id="refresh-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+      <button class="icon-btn" onclick="toggleTheme()" title="Тема" id="theme-btn">🌙</button>
+    </div>
+  </header>
+
+  <main class="content">
+
+    <!-- SECTION: CARDS -->
+    <section id="section-cards" class="section">
+      <div class="section-inner">
+        <div id="cards-container"></div>
+      </div>
+    </section>
+
+    <!-- SECTION: RATES -->
+    <section id="section-rates" class="section">
+      <div class="section-inner">
+        <div class="currency-cards-grid" id="currency-cards"></div>
+        <div class="rates-bottom">
+          <div class="card comparison-card">
+            <div class="card-header"><h3>Порівняння курсів</h3></div>
+            <div class="table-wrap">
+              <table class="comparison-table">
+                <thead><tr>
+                  <th>Валюта</th><th>НБУ</th>
+                  <th>Mono купівля</th><th>Mono продаж</th>
+                  <th>Приват купівля</th><th>Приват продаж</th>
+                </tr></thead>
+                <tbody id="comparison-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <div class="card-header">
+              <h3>Графік курсу НБУ</h3>
+              <div class="chart-controls">
+                <select id="chart-currency" class="select-sm" onchange="updateRateChart()">
+                  <option value="USD">USD</option><option value="EUR">EUR</option>
+                </select>
+                <div class="period-tabs" id="chart-period">
+                  <button class="period-tab active" onclick="selectPeriod(this,7)">7д</button>
+                  <button class="period-tab" onclick="selectPeriod(this,30)">30д</button>
+                  <button class="period-tab" onclick="selectPeriod(this,90)">3м</button>
+                  <button class="period-tab" onclick="selectPeriod(this,365)">1р</button>
+                </div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="rate-chart"></canvas></div>
+          </div>
+          <div class="card converter-card">
+            <div class="card-header"><h3>Конвертер</h3></div>
+            <div class="converter-body">
+              <div class="converter-row">
+                <input type="number" id="conv-amount-from" class="conv-input" placeholder="0.00" oninput="calcConverter('from')">
+                <select id="conv-from" class="conv-select" onchange="calcConverter('from')">
+                  <option value="UAH">🇺🇦 UAH</option>
+                  <option value="USD" selected>🇺🇸 USD</option>
+                  <option value="EUR">🇪🇺 EUR</option>
+                </select>
+              </div>
+              <div class="converter-swap"><button class="swap-btn" onclick="swapConverter()">⇅</button></div>
+              <div class="converter-row">
+                <input type="number" id="conv-amount-to" class="conv-input" placeholder="0.00" oninput="calcConverter('to')">
+                <select id="conv-to" class="conv-select" onchange="calcConverter('from')">
+                  <option value="UAH" selected>🇺🇦 UAH</option>
+                  <option value="USD">🇺🇸 USD</option>
+                  <option value="EUR">🇪🇺 EUR</option>
+                </select>
+              </div>
+              <div class="converter-info" id="converter-info"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: SETTINGS -->
+    <section id="section-history" class="section">
+      <div class="section-inner">
+        <div class="card">
+          <div class="history-toolbar">
+            <select id="hist-card" class="select-sm" onchange="renderHistory()"><option value="">Усі картки</option></select>
+            <select id="hist-ccy" class="select-sm" onchange="renderHistory()">
+              <option value="">Усі валюти</option><option value="USD">USD</option><option value="EUR">EUR</option>
+            </select>
+            <select id="hist-type" class="select-sm" onchange="renderHistory()">
+              <option value="">Купівля і продаж</option><option value="buy">Тільки купівля</option><option value="sell">Тільки продаж</option>
+            </select>
+            <div class="history-toolbar-right">
+              <button class="btn btn-sm btn-secondary" onclick="exportHistoryCSV()">⬇ Експорт CSV</button>
+            </div>
+          </div>
+          <div class="history-summary" id="hist-summary"></div>
+          <div class="table-wrap">
+            <table class="comparison-table history-table">
+              <thead><tr>
+                <th>Дата</th><th>Картка</th><th>Тип</th><th>Сума</th><th>Курс</th><th>Сума в грн</th><th>Зараз</th><th>Джерело</th><th></th>
+              </tr></thead>
+              <tbody id="hist-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="section-settings" class="section">
+      <div class="section-inner">
+        <div class="settings-grid">
+          <div class="card">
+            <div class="card-header"><h3>Зовнішній вигляд</h3></div>
+            <div class="form-group">
+              <label class="form-label">Тема</label>
+              <div class="theme-toggle-row">
+                <button class="btn btn-secondary" onclick="toggleTheme()">Перемкнути тему</button>
+                <span id="theme-current-label" class="text-muted" style="font-size:13px"></span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Оновлення курсів</h3></div>
+            <div class="form-group">
+              <label class="form-label">Частота оновлення</label>
+              <select id="set-refresh" class="form-input" onchange="saveSetting('refreshInterval', this.value)">
+                <option value="1">Кожну хвилину</option>
+                <option value="5" selected>Кожні 5 хвилин</option>
+                <option value="15">Кожні 15 хвилин</option>
+              </select>
+              <p class="form-hint">Monobank оновлюється не частіше ніж раз на 5 хвилин.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>📱 Відкрити на телефоні</h3></div>
+            <div id="phone-access"><p class="form-hint">Завантаження…</p></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>🤖 Telegram-бот</h3></div>
+            <div id="bot-card"><p class="form-hint">Завантаження…</p></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Режим презентації</h3></div>
+            <div class="form-group">
+              <label class="wx-switch">
+                <input type="checkbox" id="present-toggle" onchange="togglePresentMode(this.checked)">
+                <span class="wx-switch-track"><span class="wx-switch-thumb"></span></span>
+                <span>Сховати ім'я, номери карток і суми</span>
+              </label>
+              <p class="form-hint">Для показу на захисті й скріншотів у документацію. Курси, проценти й графіки лишаються видимими.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Сповіщення про курс</h3></div>
+            <div class="form-group">
+              <label class="form-label">Повідомити, коли курс продажу Mono</label>
+              <div class="alert-form">
+                <select id="alert-ccy" class="form-input"><option value="EUR">EUR</option><option value="USD">USD</option></select>
+                <select id="alert-dir" class="form-input"><option value="below">нижче за</option><option value="above">вище за</option></select>
+                <input type="number" id="alert-value" class="form-input" placeholder="50.50" step="0.01">
+                <button class="btn btn-primary" onclick="addRateAlert()">Додати</button>
+              </div>
+              <p class="form-hint" id="alert-current"></p>
+            </div>
+            <div id="alerts-list" class="alerts-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Погодний фон</h3></div>
+            <div class="form-group">
+              <label class="wx-switch">
+                <input type="checkbox" id="wx-enabled" onchange="wxSetEnabled(this.checked)">
+                <span class="wx-switch-track"><span class="wx-switch-thumb"></span></span>
+                <span>Живий погодний фон</span>
+              </label>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Місто</label>
+              <select id="wx-city" class="form-input" onchange="wxSetCity(this.value)">
+                <option value="kyiv">Київ</option>
+                <option value="lviv">Львів</option>
+                <option value="odesa">Одеса</option>
+                <option value="kharkiv">Харків</option>
+                <option value="dnipro">Дніпро</option>
+                <option value="vinnytsia">Вінниця</option>
+                <option value="geo">📍 Моє місцезнаходження</option>
+              </select>
+              <button class="btn btn-secondary" style="margin-top:10px" onclick="wxUseGeo()">📍 Визначити моє місцезнаходження</button>
+              <p class="form-hint" id="wx-geo-hint"></p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Тест фону</label>
+              <select id="wx-test" class="form-input" onchange="wxSetTest(this.value)">
+                <option value="auto">Авто (за реальною погодою)</option>
+                <option value="sun">☀️ Ясно</option>
+                <option value="night">🌙 Ніч</option>
+                <option value="clouds">☁️ Хмарно</option>
+                <option value="fog">🌫️ Туман</option>
+                <option value="rain">🌧️ Дощ</option>
+                <option value="snow">❄️ Сніг</option>
+                <option value="storm">⛈️ Гроза</option>
+              </select>
+              <p class="form-hint">Погода: Open-Meteo, оновлюється кожні 15 хвилин. Якщо в системі вимкнено анімації — фон статичний.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav" id="bottom-nav">
+    <a class="bottom-nav-item" data-section="cards" onclick="navigateTo('cards')">💳<span>Картки</span></a>
+    <a class="bottom-nav-item" data-section="rates" onclick="navigateTo('rates')">📈<span>Курси</span></a>
+    <a class="bottom-nav-item" data-section="history" onclick="navigateTo('history')">🧾<span>Історія</span></a>
+    <a class="bottom-nav-item" data-section="settings" onclick="navigateTo('settings')">⚙️<span>Нал.</span></a>
+  </nav>
+</div>
+
+<!-- MODALS -->
+<div id="modal-overlay" class="modal-overlay hidden" onclick="closeModalOnBg(event)">
+
+  <!-- Оновити баланс ручної картки -->
+  <div id="modal-update-balance" class="modal hidden">
+    <div class="modal-header">
+      <h3>Оновити баланс</h3>
+      <button class="modal-close" onclick="closeModal('modal-update-balance')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Новий баланс</label>
+        <input type="number" id="upd-balance-val" class="form-input" placeholder="0.00" step="0.01">
+      </div>
+      <input type="hidden" id="upd-balance-card-id">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-update-balance')">Скасувати</button>
+      <button class="btn btn-primary" onclick="submitUpdateBalance()">Зберегти</button>
+    </div>
+  </div>
+
+  <!-- Додати ручну картку -->
+  <div id="modal-add-card" class="modal hidden">
+    <div class="modal-header">
+      <h3>Додати картку</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-card')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Банк</label>
+        <input type="text" id="add-card-bank" class="form-input" value="Приват">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Валюта</label>
+        <select id="add-card-currency" class="form-input">
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Останні 4 цифри</label>
+        <input type="text" id="add-card-last4" class="form-input" placeholder="1234" maxlength="4">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Баланс</label>
+        <input type="number" id="add-card-balance" class="form-input" placeholder="0.00" step="0.01">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-card')">Скасувати</button>
+      <button class="btn btn-primary" onclick="submitAddCard()">Додати</button>
+    </div>
+  </div>
+
+  <!-- Додати покупку -->
+  <div id="modal-add-purchase" class="modal hidden">
+    <div class="modal-header">
+      <h3>Додати покупку</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-purchase')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ap-card-id">
+      <input type="hidden" id="ap-currency">
+      <div class="form-group">
+        <label class="form-label">Дата</label>
+        <input type="date" id="ap-date" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Сума у валюті</label>
+        <input type="number" id="ap-amount" class="form-input" placeholder="0.00" step="0.01" oninput="calcApRate()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Курс (грн)</label>
+        <input type="number" id="ap-rate" class="form-input" placeholder="напр. 42.50" step="0.01" oninput="calcApUah()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Або сума в гривнях</label>
+        <input type="number" id="ap-uah" class="form-input" placeholder="або введіть грн" step="0.01" oninput="calcApRate()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Примітка (необов'язково)</label>
+        <input type="text" id="ap-note" class="form-input" placeholder="">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-purchase')">Скасувати</button>
+      <button class="btn btn-primary" onclick="submitAddPurchase()">Додати</button>
+    </div>
+  </div>
+  <!-- Вхід за PIN-кодом -->
+  <div id="modal-pin" class="modal hidden">
+    <div class="modal-header"><h3>🔒 Вхід</h3></div>
+    <div class="modal-body">
+      <p class="form-hint">Ви відкрили «Мої валюти» з іншого пристрою. Введіть PIN-код із файлу server/.env.</p>
+      <div class="form-group">
+        <input type="password" id="pin-input" class="form-input" inputmode="numeric" autocomplete="current-password"
+               placeholder="PIN-код" onkeydown="if(event.key==='Enter')submitPin()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="submitPin()">Увійти</button>
+    </div>
+  </div>
+  <!-- Калькулятор купівлі -->
+  <div id="modal-buy-calc" class="modal hidden">
+    <div class="modal-header">
+      <h3>Купити <span id="buy-calc-ccy">USD</span></h3>
+      <button class="modal-close" onclick="closeModal('modal-buy-calc')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="buy-calc-rate-row">
+        Поточний курс Mono: <strong id="buy-calc-rate">—</strong>
+      </div>
+      <input type="hidden" id="buy-calc-ccy-hidden">
+      <input type="hidden" id="buy-calc-rate-hidden">
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Сума у валюті (<span id="buy-calc-sym">$</span>)</label>
+        <input type="number" id="buy-calc-amount" class="form-input" placeholder="0.00" step="0.01" oninput="calcBuyAmount()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Або сума в гривнях (₴)</label>
+        <input type="number" id="buy-calc-uah" class="form-input" placeholder="0.00" step="0.01" oninput="calcBuyUah()">
+      </div>
+      <div class="buy-calc-hint">Введіть суму — розрахунок миттєвий</div>
+    </div>
+    <div class="buy-calc-steps">
+      <div class="buy-calc-qr-code" id="buy-calc-qr-code" title="monobank.ua"></div>
+      <div>
+      <strong>Купівля проходить у застосунку банку</strong>
+      <ol>
+        <li>Відскануйте QR телефоном або відкрийте застосунок monobank.</li>
+        <li>Рахунок <b id="buy-calc-steps-ccy">EUR</b> → «Купити».</li>
+        <li>Поверніться сюди й натисніть «🔄 Синхронізувати покупки» — покупка з'явиться сама.</li>
+      </ol>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-buy-calc')">Закрити</button>
+      <button class="btn btn-primary" id="buy-calc-open-app" onclick="openMonoApp()">Відкрити monobank →</button>
+    </div>
+  </div>
+
+
+<script src="qrcode.min.js"></script>
+<script src="app.js?v=12"></script>
+<script src="features.js?v=2"></script>
+<script src="weather.js?v=1"></script>
+</body>
+</html>
